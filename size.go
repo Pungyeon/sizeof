@@ -48,7 +48,10 @@ func sizeOfObject(val reflect.Value, prefix string) int64 {
 	case reflect.Chan:
 		var d chan bool
 		return int64(unsafe.Sizeof(d))
-	case reflect.Struct, reflect.Interface:
+	case reflect.Interface:
+		var i interface{}
+		return int64(unsafe.Sizeof(i))
+	case reflect.Struct:
 		return sizeOfStruct(val, prefix)
 	case reflect.Func:
 		return int64(unsafe.Sizeof(func(){}))

@@ -75,14 +75,18 @@ func TestSizeOf(t *testing.T) {
 }
 
 func TestInterface(t *testing.T) {
-	t.Error(SizeOf(&Abstract{flatter: &Flat{ name: "dingeling "}}))
-	t.Error(SizeOf(&Flat{ name: "dingeling "}))
+	t.Error(SizeOf(&Abstract{flatter: &Flat{ name: "dingeling "}}).buffer.String())
+	t.Error(SizeOf(&Flat{ contacts: map[string]Flat{
+		"lasse": Flat{
+			name: "jakobsen",
+		},
+	}, name: "dingeling "}).buffer.String())
 }
 
 func check(t *testing.T, a interface{}, b int64) {
 	size := SizeOf(a)
 	if size.result != b {
 		t.Fatalf("Not equal size (%s): %d != %d",
-			reflect.ValueOf(a).Kind(), size, b)
+			reflect.ValueOf(a).Kind(), size.result, b)
 	}
 }

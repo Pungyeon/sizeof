@@ -8,7 +8,11 @@ import (
 )
 
 const (
-	Int32 int32 = 0
+	Bool  = int64(unsafe.Sizeof(false))
+	Int64 = int64(unsafe.Sizeof(int64(0)))
+	Int32 = int64(unsafe.Sizeof(int32(0)))
+	Uint32 = int64(unsafe.Sizeof(uint32(0)))
+	Int = int64(unsafe.Sizeof(int(0)))
 )
 
 func SizeOf(v interface{}) int64 {
@@ -25,8 +29,16 @@ func sizeOfObject(val reflect.Value, prefix string) int64 {
 	switch val.Kind() {
 	case reflect.Ptr:
 		return sizeOf(val.Elem(), prefix)
+	case reflect.Int64:
+		return Int64
 	case reflect.Int32:
-		return int64(unsafe.Sizeof(Int32))
+		return Int32
+	case reflect.Uint32:
+		return Uint32
+	case reflect.Int:
+		return Int
+	case reflect.Bool:
+		return Bool
 	case reflect.String:
 		return int64(unsafe.Sizeof('c')) * int64(val.Len())
 	case reflect.Map:
@@ -36,8 +48,10 @@ func sizeOfObject(val reflect.Value, prefix string) int64 {
 	case reflect.Chan:
 		var d chan bool
 		return int64(unsafe.Sizeof(d))
-	case reflect.Struct:
+	case reflect.Struct, reflect.Interface:
 		return sizeOfStruct(val, prefix)
+	case reflect.Func:
+		return int64(unsafe.Sizeof(func(){}))
 	default:
 		fmt.Println("Skipping:", val.Kind())
 		return 0

@@ -51,13 +51,14 @@ func sizeOfObject(val reflect.Value, prefix string, w io.Writer) int64 {
 		return int64(unsafe.Sizeof(d))
 	case reflect.Interface:
 		var i interface{}
+		fmt.Println("interface:", val.Elem())
 		return int64(unsafe.Sizeof(i))
 	case reflect.Struct:
 		return sizeOfStruct(val, prefix, w)
 	case reflect.Func:
 		return int64(unsafe.Sizeof(func(){}))
 	default:
-		w.Write([]byte(fmt.Sprint("Skipping:", val.Kind())))
+		w.Write([]byte(fmt.Sprint("Skipping:", val.Kind(), "\n")))
 		return 0
 	}
 }

@@ -1,7 +1,9 @@
 package sizeof
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"testing"
@@ -35,6 +37,12 @@ func TestSizeOf(t *testing.T) {
 
 	check(t, char, int64(unsafe.Sizeof(char)))
 	check(t, str, int64(unsafe.Sizeof(char))*int64(len(str)))
+
+
+	b := &bytes.Buffer{}
+	func (w io.Writer) {
+		SizeOf(b, os.Stdout)
+	}(b)
 
 	check(t, Flat{}, fullFlatSize)
 

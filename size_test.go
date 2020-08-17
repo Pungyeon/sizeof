@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"reflect"
 	"testing"
 	"unsafe"
 )
 
 type Flatter interface {}
+
+type Abstract struct {
+	flatter Flatter
+}
 
 type Inner struct {
 	dinner string
@@ -41,7 +44,7 @@ func TestSizeOf(t *testing.T) {
 
 	b := &bytes.Buffer{}
 	func (w io.Writer) {
-		SizeOf(b, os.Stdout)
+		SizeOf(b)
 	}(b)
 
 	check(t, Flat{}, fullFlatSize)
@@ -71,8 +74,13 @@ func TestSizeOf(t *testing.T) {
 
 }
 
+func TestInterface(t *testing.T) {
+	t.Error(SizeOf(&Abstract{flatter: &Flat{ name: "dingeling "}}))
+	t.Error(SizeOf(&Flat{ name: "dingeling "}))
+}
+
 func check(t *testing.T, a interface{}, b int64) {
-	size := SizeOf(a, os.Stdout)
+	size := SizeOf(a)
 	if size != b {
 		t.Fatalf("Not equal size (%s): %d != %d",
 			reflect.ValueOf(a).Kind(), size, b)

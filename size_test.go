@@ -9,11 +9,16 @@ import (
 
 type Flatter interface {}
 
+type Inner struct {
+	dinner string
+}
+
 type Flat struct {
 	name string
 	contacts map[string]Flat
 	tags []string
 	channel chan string
+	inner Inner
 }
 
 func TestSizeOf(t *testing.T) {
@@ -21,11 +26,11 @@ func TestSizeOf(t *testing.T) {
 	var str string = "dddd"
 	var i interface{}
 	var c chan int
-	flatSize := int64(unsafe.Sizeof(i))
+	interfaceSize := int64(unsafe.Sizeof(i))
 	mapSize := int64(unsafe.Sizeof(map[string]Flat{}))
 	sliceSize := int64(unsafe.Sizeof([]string{}))
 	chanSize := int64(unsafe.Sizeof(c))
-	fullFlatSize := flatSize + mapSize + sliceSize + chanSize
+	fullFlatSize := (interfaceSize*2) + mapSize + sliceSize + chanSize
 
 	check(t, char, int64(unsafe.Sizeof(char)))
 	check(t, str, int64(unsafe.Sizeof(char))*int64(len(str)))
@@ -37,8 +42,11 @@ func TestSizeOf(t *testing.T) {
 		check(t,
 			Flat{
 				name: "dingeling",
+				inner: Inner{
+					dinner: "chicken winner",
+				},
 			},
-			fullFlatSize+int64(unsafe.Sizeof('c')*9))
+			fullFlatSize+int64(unsafe.Sizeof('c')*23))
 	})
 
 	t.Run("interface size", func(t *testing.T) {
@@ -50,6 +58,8 @@ func TestSizeOf(t *testing.T) {
 			flatter,
 			fullFlatSize+int64(unsafe.Sizeof('c')*9))
 	})
+
+
 }
 
 func check(t *testing.T, a interface{}, b int64) {

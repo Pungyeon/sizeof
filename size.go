@@ -18,7 +18,6 @@ func SizeOf(v interface{}) int64 {
 
 func sizeOf(val reflect.Value, prefix string) int64 {
 	total := sizeOfObject(val, prefix)
-	fmt.Printf("(%s) [%d]\n", val.Kind(), total)
 	return total
 }
 
@@ -38,7 +37,7 @@ func sizeOfObject(val reflect.Value, prefix string) int64 {
 		var d chan bool
 		return int64(unsafe.Sizeof(d))
 	case reflect.Struct:
-		return sizeOfStruct(val, prefix+"\t")
+		return sizeOfStruct(val, prefix)
 	default:
 		fmt.Println("Skipping:", val.Kind())
 		return 0
@@ -46,33 +45,30 @@ func sizeOfObject(val reflect.Value, prefix string) int64 {
 }
 
 func sizeOfMap(val reflect.Value, prefix string) int64 {
-	fmt.Println("(Map):")
 	total := int64(unsafe.Sizeof(map[int]int{}))
 	for _, key := range val.MapKeys() {
 		total += sizeOf(key, prefix+"\t") + sizeOf(val.MapIndex(key), "")
 	}
-	fmt.Println(prefix, "Total:", total)
 	return total
 }
 
 func sizeOfStruct(val reflect.Value, prefix string) int64 {
-	fmt.Printf("(%s::%s):\n", pkgName(val), val.Type().Name())
+	fmt.Printf("%s(%s::%s):\n", prefix, pkgName(val), val.Type().Name())
 	total := int64(unsafe.Sizeof(val.Interface()))
+	npref := prefix + "\t"
 	for i := 0; i < val.NumField(); i++ {
-		fmt.Printf("\t%s: ", val.Type().Field(i).Name)
-		total += sizeOf(val.Field(i), prefix)
+		result := sizeOf(val.Field(i), npref)
+		fmt.Printf("%s%s: %s [%d]\n", npref, val.Type().Field(i).Name, val.Type().Field(i).Type.Kind(), result)
+		total += result
 	}
-	fmt.Println("(Struct):", total)
 	return total
 }
 
 func sizeOfSlice(val reflect.Value, prefix string) int64 {
-	fmt.Println("(Slice):")
 	total := int64(unsafe.Sizeof([]int{}))
 	for i := 0; i < val.Len(); i++ {
 		total += sizeOf(val.Index(i), prefix+"\t")
 	}
-	fmt.Println(prefix, "Total:", total)
 	return total
 }
 

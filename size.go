@@ -50,9 +50,8 @@ func sizeOfObject(val reflect.Value, prefix string, w io.Writer) int64 {
 		var d chan bool
 		return int64(unsafe.Sizeof(d))
 	case reflect.Interface:
-		var i interface{}
 		fmt.Println("interface:", val.Elem())
-		return int64(unsafe.Sizeof(i))
+		return sizeOf(val.Elem(), prefix, w)
 	case reflect.Struct:
 		return sizeOfStruct(val, prefix, w)
 	case reflect.Func:

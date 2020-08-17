@@ -2,6 +2,7 @@ package sizeof
 
 import (
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 	"unsafe"
@@ -15,20 +16,20 @@ const (
 	Int = int64(unsafe.Sizeof(int(0)))
 )
 
-func SizeOf(v interface{}) int64 {
+func SizeOf(v interface{}, w io.Writer) int64 {
 	val := reflect.ValueOf(v)
-	return sizeOf(val, "")
+	return sizeOf(val, "", w)
 }
 
-func sizeOf(val reflect.Value, prefix string) int64 {
-	total := sizeOfObject(val, prefix)
+func sizeOf(val reflect.Value, prefix string, w io.Writer) int64 {
+	total := sizeOfObject(val, prefix, w)
 	return total
 }
 
-func sizeOfObject(val reflect.Value, prefix string) int64 {
+func sizeOfObject(val reflect.Value, prefix string, w io.Writer) int64 {
 	switch val.Kind() {
 	case reflect.Ptr:
-		return sizeOf(val.Elem(), prefix)
+		return sizeOf(val.Elem(), prefix, w)
 	case reflect.Int64:
 		return Int64
 	case reflect.Int32:
@@ -42,9 +43,9 @@ func sizeOfObject(val reflect.Value, prefix string) int64 {
 	case reflect.String:
 		return int64(unsafe.Sizeof('c')) * int64(val.Len())
 	case reflect.Map:
-		return sizeOfMap(val, prefix+"\t")
+		return sizeOfMap(val, prefix+"\t", w)
 	case reflect.Slice:
-		return sizeOfSlice(val, prefix+"\t")
+		return sizeOfSlice(val, prefix+"\t", w)
 	case reflect.Chan:
 		var d chan bool
 		return int64(unsafe.Sizeof(d))
@@ -52,39 +53,39 @@ func sizeOfObject(val reflect.Value, prefix string) int64 {
 		var i interface{}
 		return int64(unsafe.Sizeof(i))
 	case reflect.Struct:
-		return sizeOfStruct(val, prefix)
+		return sizeOfStruct(val, prefix, w)
 	case reflect.Func:
 		return int64(unsafe.Sizeof(func(){}))
 	default:
-		fmt.Println("Skipping:", val.Kind())
+		w.Write([]byte(fmt.Sprint("Skipping:", val.Kind())))
 		return 0
 	}
 }
 
-func sizeOfMap(val reflect.Value, prefix string) int64 {
+func sizeOfMap(val reflect.Value, prefix string, w io.Writer) int64 {
 	total := int64(unsafe.Sizeof(map[int]int{}))
 	for _, key := range val.MapKeys() {
-		total += sizeOf(key, prefix+"\t") + sizeOf(val.MapIndex(key), "")
+		total += sizeOf(key, prefix+"\t", w) + sizeOf(val.MapIndex(key), "", w)
 	}
 	return total
 }
 
-func sizeOfStruct(val reflect.Value, prefix string) int64 {
-	fmt.Printf("%s(%s::%s):\n", prefix, pkgName(val), val.Type().Name())
+func sizeOfStruct(val reflect.Value, prefix string, w io.Writer) int64 {
+	w.Write([]byte(fmt.Sprintf("%s(%s::%s):\n", prefix, pkgName(val), val.Type().Name())))
 	total := int64(unsafe.Sizeof(val.Interface()))
 	npref := prefix + "\t"
 	for i := 0; i < val.NumField(); i++ {
-		result := sizeOf(val.Field(i), npref)
-		fmt.Printf("%s%s: %s [%d]\n", npref, val.Type().Field(i).Name, val.Type().Field(i).Type.Kind(), result)
+		result := sizeOf(val.Field(i), npref, w)
+		w.Write([]byte(fmt.Sprintf("%s%s: %s [%d]\n", npref, val.Type().Field(i).Name, val.Type().Field(i).Type.Kind(), result)))
 		total += result
 	}
 	return total
 }
 
-func sizeOfSlice(val reflect.Value, prefix string) int64 {
+func sizeOfSlice(val reflect.Value, prefix string, w io.Writer) int64 {
 	total := int64(unsafe.Sizeof([]int{}))
 	for i := 0; i < val.Len(); i++ {
-		total += sizeOf(val.Index(i), prefix+"\t")
+		total += sizeOf(val.Index(i), prefix+"\t", w)
 	}
 	return total
 }

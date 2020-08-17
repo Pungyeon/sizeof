@@ -2,6 +2,7 @@ package sizeof
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 	"unsafe"
@@ -63,7 +64,7 @@ func TestSizeOf(t *testing.T) {
 }
 
 func check(t *testing.T, a interface{}, b int64) {
-	size := SizeOf(a)
+	size := SizeOf(a, os.Stdout)
 	if size != b {
 		t.Fatalf("Not equal size (%s): %d != %d",
 			reflect.ValueOf(a).Kind(), size, b)

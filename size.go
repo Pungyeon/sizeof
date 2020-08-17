@@ -15,6 +15,7 @@ const (
 	Uint32 = int64(unsafe.Sizeof(uint32(0)))
 	Int = int64(unsafe.Sizeof(int(0)))
 	Tab = "\t"
+	Char = int64(unsafe.Sizeof('c'))
 )
 var (
 	_chan chan bool
@@ -27,8 +28,10 @@ type Size struct {
 	result int64
 }
 
-func New() *Size {
-	return &Size{}
+func New(size int64) *Size {
+	return &Size{
+		result: size,
+	}
 }
 
 func (s *Size) Inner() *Size {
@@ -37,83 +40,83 @@ func (s *Size) Inner() *Size {
 	}
 }
 
-func SizeOf(v interface{}) int64 {
+func SizeOf(v interface{}) *Size {
 	val := reflect.ValueOf(v)
-	s := New()
+	s := New(0)
 
 	result := s.sizeOf(val)
 	fmt.Println(s.buffer.String())
 	return result
 }
 
-func (s *Size) sizeOf(val reflect.Value) int64 {
+func (s *Size) sizeOf(val reflect.Value) *Size {
 	total := s.sizeOfObject(val)
 	return total
 }
 
-func (s *Size) sizeOfObject(val reflect.Value) int64 {
+func (s *Size) sizeOfObject(val reflect.Value) *Size {
 	switch val.Kind() {
 	case reflect.Ptr:
 		return s.sizeOf(val.Elem())
 	case reflect.Int64:
-		return Int64
+		return New(Int64)
 	case reflect.Int32:
-		return Int32
+		return New(Int32)
 	case reflect.Uint32:
-		return Uint32
+		return New(Uint32)
 	case reflect.Int:
-		return Int
+		return New(Int)
 	case reflect.Bool:
-		return Bool
+		return New(Bool)
 	case reflect.String:
-		return int64(unsafe.Sizeof('c')) * int64(val.Len())
+		return New(Char * int64(val.Len()))
 	case reflect.Map:
 		return s.Inner().sizeOfMap(val)
 	case reflect.Slice:
 		return s.Inner().sizeOfSlice(val)
 	case reflect.Chan:
-		return Chan
+		return New(Chan)
 	case reflect.Interface:
 		return s.sizeOf(val.Elem())
 	case reflect.Struct:
 		return s.sizeOfStruct(val)
 	case reflect.Func:
-		return int64(unsafe.Sizeof(func(){}))
+		return New(int64(unsafe.Sizeof(func(){})))
 	default:
 		s.buffer.WriteString(fmt.Sprint("Skipping:", val.Kind(), "\n"))
-		return 0
+		return New(0)
 	}
 }
 
-func (s *Size) sizeOfMap(val reflect.Value) int64 {
-	total := int64(unsafe.Sizeof(map[int]int{}))
+func (s *Size) sizeOfMap(val reflect.Value) *Size {
+	s.result += int64(unsafe.Sizeof(map[int]int{}))
 	for _, key := range val.MapKeys() {
-		total += s.Inner().sizeOf(key) + s.sizeOf(val.MapIndex(key))
+		s.result += s.Inner().sizeOf(key).result + s.sizeOf(val.MapIndex(key)).result
 	}
-	return total
+	return s
 }
 
-func (s *Size) sizeOfStruct(val reflect.Value) int64 {
+func (s *Size) sizeOfStruct(val reflect.Value) *Size {
 	s.buffer.Write([]byte(fmt.Sprintf("%s(%s::%s):\n", s.prefix, pkgName(val), val.Type().Name())))
-	total := int64(unsafe.Sizeof(val.Interface()))
+	s.result += int64(unsafe.Sizeof(val.Interface()))
 	npref := s.prefix + Tab
 	for i := 0; i < val.NumField(); i++ {
 		s.buffer.WriteString(fmt.Sprintf("%s%s: %s ", npref, val.Type().Field(i).Name, val.Type().Field(i).Type.Kind()))
 		inner := s.Inner()
 		result := inner.sizeOf(val.Field(i))
 		s.buffer.WriteString(fmt.Sprintf("[%d]\n", result))
-		total += result
+		s.result += result.result
 		s.buffer.Write(inner.buffer.Bytes())
 	}
-	return total
+	return s
 }
 
-func (s *Size) sizeOfSlice(val reflect.Value) int64 {
-	total := int64(unsafe.Sizeof([]int{}))
+func (s *Size) sizeOfSlice(val reflect.Value) *Size {
+	s.result += int64(unsafe.Sizeof([]int{}))
 	for i := 0; i < val.Len(); i++ {
-		total += s.Inner().sizeOf(val.Index(i))
+		s.result += s.Inner().sizeOf(val.Index(i)).result
 	}
-	return total
+	return s
 }
 
 func pkgName(a reflect.Value) string {

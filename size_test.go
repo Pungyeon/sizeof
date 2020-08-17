@@ -81,7 +81,7 @@ func TestInterface(t *testing.T) {
 
 func check(t *testing.T, a interface{}, b int64) {
 	size := SizeOf(a)
-	if size != b {
+	if size.result != b {
 		t.Fatalf("Not equal size (%s): %d != %d",
 			reflect.ValueOf(a).Kind(), size, b)
 	}

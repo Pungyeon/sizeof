@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"reflect"
 	"testing"
 	"unsafe"
@@ -75,12 +76,12 @@ func TestSizeOf(t *testing.T) {
 }
 
 func TestInterface(t *testing.T) {
-	t.Error(SizeOf(&Abstract{flatter: &Flat{ name: "dingeling "}}).buffer.String())
-	t.Error(SizeOf(&Flat{ contacts: map[string]Flat{
-		"lasse": Flat{
-			name: "jakobsen",
-		},
-	}, name: "dingeling "}).buffer.String())
+	SizeOf(&Abstract{flatter: &Flat{ name: "dingeling "}}, WithWriter(os.Stdout))
+	//t.Error(SizeOf(&Flat{ contacts: map[string]Flat{
+	//	"lasse": Flat{
+	//		name: "jakobsen",
+	//	},
+	//}, name: "dingeling "}).String())
 }
 
 func check(t *testing.T, a interface{}, b int64) {

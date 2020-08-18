@@ -3,6 +3,8 @@ package sizeof
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"reflect"
 	"strings"
 	"unsafe"
@@ -21,34 +23,62 @@ var (
 	Char = int64(unsafe.Sizeof('c'))
 )
 
-type Size struct {
-	prefix string
-	buffer bytes.Buffer
-	result int64
+type Option func(*Size)
+
+
+
+func WithWriter(w io.ReadWriter) Option {
+	return func(s *Size) {
+		s.buffer = w
+	}
 }
 
-func New(size int64) *Size {
-	return &Size{
+type Size struct {
+	prefix string
+	buffer io.ReadWriter
+	result int64
+	opts []Option
+}
+
+func New(size int64, opts ...Option) *Size {
+	s := &Size{
 		result: size,
+		buffer: &bytes.Buffer{},
+		opts: opts,
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+func (s *Size) String() string {
+	data, err := ioutil.ReadAll(s.buffer)
+	if err != nil {
+		return err.Error()
+	}
+	return string(data)
 }
 
 func (s *Size) Result() int64 {
 	return s.result
 }
 
-func (s *Size) String() string {
-	return s.buffer.String()
-}
-
 func (s *Size) inner() *Size {
-	return &Size{
+	inner := &Size{
 		prefix: s.prefix+Tab,
+		buffer: &bytes.Buffer{},
 	}
+
+	for _, opt := range s.opts {
+		opt(inner)
+	}
+
+	return inner
 }
 
-func SizeOf(v interface{}) *Size {
-	return New(0).sizeOf(reflect.ValueOf(v))
+func SizeOf(v interface{}, opts ...Option) *Size {
+	return New(0, opts...).sizeOf(reflect.ValueOf(v))
 }
 
 func (s *Size) add(n int64) *Size {
@@ -89,7 +119,7 @@ func (s *Size) sizeOfObject(val reflect.Value) *Size {
 	case reflect.Func:
 		return Func
 	default:
-		s.buffer.WriteString(fmt.Sprint("Skipping:", val.Kind(), "\n"))
+		s.buffer.Write([]byte(fmt.Sprint("Skipping:", val.Kind(), "\n")))
 		return New(0)
 	}
 }
@@ -113,19 +143,24 @@ func (s *Size) sizeOfStruct(val reflect.Value) *Size {
 }
 
 func (s *Size) writeStructHeader(val reflect.Value) {
-	s.buffer.WriteString(fmt.Sprintf("%s(%s::%s):\n", s.prefix, pkgName(val), val.Type().Name()))
+	s.buffer.Write([]byte(fmt.Sprintf("%s(%s::%s):\n", s.prefix, pkgName(val), val.Type().Name())))
 }
 
 func (s *Size) writeProperty(val reflect.Value, i int) {
-	s.buffer.WriteString(
+	s.buffer.Write([]byte(
 		fmt.Sprintf("%s%s: %s ",
-			s.prefix + Tab, val.Type().Field(i).Name, val.Type().Field(i).Type.Kind()))
+			s.prefix + Tab, val.Type().Field(i).Name, val.Type().Field(i).Type.Kind())))
 }
 
 func (s *Size) writeResult(inner *Size) {
-	s.buffer.WriteString(fmt.Sprintf("[%d]\n", inner.result))
+	s.buffer.Write([]byte(fmt.Sprintf("[%d]\n", inner.result)))
 	s.result += inner.result
-	s.buffer.Write(inner.buffer.Bytes())
+	data, err := ioutil.ReadAll(inner.buffer)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+	s.buffer.Write(data)
 }
 
 func (s *Size) sizeOfSlice(val reflect.Value) *Size {

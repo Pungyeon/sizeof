@@ -166,8 +166,8 @@ func (s *Size) writeResult(inner *Size) {
 
 func (s *Size) sizeOfSlice(val reflect.Value) *Size {
 	s.result += int64(unsafe.Sizeof([]int{}))
-	for i := 0; i < val.Len(); i++ {
-		s.result += s.inner().sizeOf(val.Index(i)).result
+	if val.Len() > 0 {
+		s.result += s.inner().sizeOf(val.Index(0)).result * int64(val.Len())
 	}
 	return s
 }

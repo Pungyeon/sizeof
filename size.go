@@ -143,6 +143,7 @@ func (s *Size) sizeOfStruct(val reflect.Value) *Size {
 }
 
 func (s *Size) writeStructHeader(val reflect.Value) {
+	fmt.Printf("%s(%s::%s):\n", s.prefix, pkgName(val), val.Type().Name())
 	s.buffer.Write([]byte(fmt.Sprintf("%s(%s::%s):\n", s.prefix, pkgName(val), val.Type().Name())))
 }
 

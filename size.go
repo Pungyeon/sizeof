@@ -33,7 +33,15 @@ func New(size int64) *Size {
 	}
 }
 
-func (s *Size) Inner() *Size {
+func (s *Size) Result() int64 {
+	return s.result
+}
+
+func (s *Size) String() string {
+	return s.buffer.String()
+}
+
+func (s *Size) inner() *Size {
 	return &Size{
 		prefix: s.prefix+Tab,
 	}
@@ -69,9 +77,9 @@ func (s *Size) sizeOfObject(val reflect.Value) *Size {
 	case reflect.String:
 		return New(Char * int64(val.Len()))
 	case reflect.Map:
-		return s.Inner().sizeOfMap(val)
+		return s.inner().sizeOfMap(val)
 	case reflect.Slice:
-		return s.Inner().sizeOfSlice(val)
+		return s.inner().sizeOfSlice(val)
 	case reflect.Chan:
 		return Chan
 	case reflect.Interface:
@@ -89,7 +97,7 @@ func (s *Size) sizeOfObject(val reflect.Value) *Size {
 func (s *Size) sizeOfMap(val reflect.Value) *Size {
 	s.result += int64(unsafe.Sizeof(map[int]int{}))
 	for _, key := range val.MapKeys() {
-		s.result += s.Inner().sizeOf(key).result + s.sizeOf(val.MapIndex(key)).result
+		s.result += s.inner().sizeOf(key).result + s.sizeOf(val.MapIndex(key)).result
 	}
 	return s
 }
@@ -99,7 +107,7 @@ func (s *Size) sizeOfStruct(val reflect.Value) *Size {
 	s.result += int64(unsafe.Sizeof(val.Interface()))
 	for i := 0; i < val.NumField(); i++ {
 		s.writeProperty(val, i)
-		s.writeResult(s.Inner().sizeOf(val.Field(i)))
+		s.writeResult(s.inner().sizeOf(val.Field(i)))
 	}
 	return s
 }
@@ -123,7 +131,7 @@ func (s *Size) writeResult(inner *Size) {
 func (s *Size) sizeOfSlice(val reflect.Value) *Size {
 	s.result += int64(unsafe.Sizeof([]int{}))
 	for i := 0; i < val.Len(); i++ {
-		s.result += s.Inner().sizeOf(val.Index(i)).result
+		s.result += s.inner().sizeOf(val.Index(i)).result
 	}
 	return s
 }

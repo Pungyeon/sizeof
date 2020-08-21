@@ -1,12 +1,9 @@
 package sizeof
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"reflect"
-	"strings"
 	"unsafe"
 )
 
@@ -25,37 +22,49 @@ var (
 
 type Option func(*Size)
 
+func WithVerbose() Option {
+	return func(size *Size) {
+		size.verbose = true
+	}
+}
 
-
-func WithWriter(w io.ReadWriter) Option {
-	return func(s *Size) {
-		s.buffer = w
+func WithSliceLimit(limit int) Option {
+	return func(size *Size) {
+		size.sliceLimit = limit
 	}
 }
 
 type Size struct {
-	prefix string
-	buffer io.ReadWriter
-	result int64
-	opts []Option
+	prefix     string
+	result     int64
+	stats      map[string]interface{}
+	verbose    bool
+	sliceLimit int
 }
 
 func New(size int64, opts ...Option) *Size {
 	s := &Size{
 		result: size,
-		buffer: &bytes.Buffer{},
-		opts: opts,
+		stats: map[string]interface{}{},
+		sliceLimit: 10_000,
 	}
+
 	for _, opt := range opts {
 		opt(s)
 	}
+
 	return s
 }
 
+
+func (s *Size) SizeOf(v interface{}) *Size {
+	return s.sizeOf(reflect.ValueOf(v))
+}
+
 func (s *Size) String() string {
-	data, err := ioutil.ReadAll(s.buffer)
+	data, err := json.MarshalIndent(s.stats, "", "    ")
 	if err != nil {
-		return err.Error()
+		panic(err)
 	}
 	return string(data)
 }
@@ -65,16 +74,12 @@ func (s *Size) Result() int64 {
 }
 
 func (s *Size) inner() *Size {
-	inner := &Size{
+	return &Size{
 		prefix: s.prefix+Tab,
-		buffer: &bytes.Buffer{},
+		stats: map[string]interface{}{},
+		verbose: s.verbose,
+		sliceLimit: s.sliceLimit,
 	}
-
-	for _, opt := range s.opts {
-		opt(inner)
-	}
-
-	return inner
 }
 
 func SizeOf(v interface{}, opts ...Option) *Size {
@@ -118,8 +123,10 @@ func (s *Size) sizeOfObject(val reflect.Value) *Size {
 		return s.sizeOfStruct(val)
 	case reflect.Func:
 		return Func
+	case reflect.Invalid:
+		return New(0)
 	default:
-		s.buffer.Write([]byte(fmt.Sprint("Skipping:", val.Kind(), "\n")))
+		fmt.Print("Skipping:", val.Kind(), "\n")
 		return New(0)
 	}
 }
@@ -133,49 +140,40 @@ func (s *Size) sizeOfMap(val reflect.Value) *Size {
 }
 
 func (s *Size) sizeOfStruct(val reflect.Value) *Size {
-	s.writeStructHeader(val)
-	s.result += int64(unsafe.Sizeof(val.Interface()))
+	s.stats[val.Type().Name()] = map[string]interface{}{}
+		s.result += int64(unsafe.Sizeof(val.Interface()))
 	for i := 0; i < val.NumField(); i++ {
-		s.writeProperty(val, i)
-		s.writeResult(s.inner().sizeOf(val.Field(i)))
+		fmt.Println(val.Type().Field(i).Name)
+		if s.verbose {
+			s.writeResult(val, i)
+		}
 	}
 	return s
 }
 
-func (s *Size) writeStructHeader(val reflect.Value) {
-	fmt.Printf("%s(%s::%s):\n", s.prefix, pkgName(val), val.Type().Name())
-	s.buffer.Write([]byte(fmt.Sprintf("%s(%s::%s):\n", s.prefix, pkgName(val), val.Type().Name())))
-}
-
-func (s *Size) writeProperty(val reflect.Value, i int) {
-	s.buffer.Write([]byte(
-		fmt.Sprintf("%s%s: %s ",
-			s.prefix + Tab, val.Type().Field(i).Name, val.Type().Field(i).Type.Kind())))
-}
-
-func (s *Size) writeResult(inner *Size) {
-	s.buffer.Write([]byte(fmt.Sprintf("[%d]\n", inner.result)))
+func (s *Size) writeResult(val reflect.Value, i int) {
+	fmt.Println(s.String())
+	inner := s.inner().sizeOf(val.Field(i))
 	s.result += inner.result
-	data, err := ioutil.ReadAll(inner.buffer)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
+	m := s.stats[val.Type().Name()].(map[string]interface{})
+	if len(inner.stats) == 0 {
+		m[val.Type().Field(i).Name] = inner.result
+	} else {
+		m[val.Type().Field(i).Name] =  inner.stats
 	}
-	s.buffer.Write(data)
 }
 
 func (s *Size) sizeOfSlice(val reflect.Value) *Size {
 	s.result += int64(unsafe.Sizeof([]int{}))
-	if val.Len() > 0 {
-		s.result += s.inner().sizeOf(val.Index(0)).result * int64(val.Len())
+	for i := 0; i < s.getLenWithLimit(val); i++ {
+		s.result += s.inner().sizeOf(val.Index(i)).result
 	}
 	return s
 }
 
-func pkgName(a reflect.Value) string {
-	paths := strings.Split(a.Type().PkgPath(), "/")
-	if len(paths) == 1 {
-		return paths[0]
+func (s *Size) getLenWithLimit(val reflect.Value) int {
+	if val.Len() > s.sliceLimit && s.sliceLimit != 0 {
+		return s.sliceLimit
 	}
-	return paths[len(paths)-1]
+	return val.Len()
 }

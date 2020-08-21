@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"reflect"
 	"testing"
 	"unsafe"
 )
 
 type Flatter interface {}
+
+type SliceInterface struct {
+	things []Abstract
+}
 
 type Abstract struct {
 	flatter Flatter
@@ -71,17 +74,43 @@ func TestSizeOf(t *testing.T) {
 			flatter,
 			fullFlatSize+int64(unsafe.Sizeof('c')*9))
 	})
-
-
 }
 
-func TestInterface(t *testing.T) {
-	SizeOf(&Abstract{flatter: &Flat{ name: "dingeling "}}, WithWriter(os.Stdout))
-	//t.Error(SizeOf(&Flat{ contacts: map[string]Flat{
-	//	"lasse": Flat{
-	//		name: "jakobsen",
-	//	},
-	//}, name: "dingeling "}).String())
+func BenchmarkLargeSlice(t *testing.B) {
+	slice := make([]Abstract, 1_000_000)
+	t.ResetTimer()
+	for i := 0; i < t.N; i++ {
+		size := SizeOf(&SliceInterface{ things: slice})
+		if size.Result() > 16000000 {
+			t.Fatal(size.Result())
+		}
+	}
+}
+
+func ding(t *testing.TB) {
+
+}
+func TestInterfaceString(t *testing.T) {
+	//size := SizeOf(&Flat{ tags: []string{
+	//	"ding", "dong", "dyno",
+	//}})
+	//fmt.Println(ze.String())
+
+	size := SizeOf(
+		&SliceInterface{ things: make([]Abstract, 100)},
+		WithVerbose())
+
+	if size.String() != "{\n    \"SliceInterface\": {\n        \"things\": 1624\n    }\n}" {
+		t.Fatalf("wrong string result returned:\n%#v\n", size.String())
+	}
+	SizeOf(
+		&Abstract{flatter: &Flat{ name: "dingeling "}},
+		WithVerbose())
+	t.Error(SizeOf(&Flat{ contacts: map[string]Flat{
+		"lasse": Flat{
+			name: "jakobsen",
+		},
+	}, name: "dingeling "}).String())
 }
 
 func check(t *testing.T, a interface{}, b int64) {

@@ -143,7 +143,6 @@ func (s *Size) sizeOfStruct(val reflect.Value) *Size {
 	s.stats[val.Type().Name()] = map[string]interface{}{}
 		s.result += int64(unsafe.Sizeof(val.Interface()))
 	for i := 0; i < val.NumField(); i++ {
-		fmt.Println(val.Type().Field(i).Name)
 		if s.verbose {
 			s.writeResult(val, i)
 		}
@@ -152,7 +151,6 @@ func (s *Size) sizeOfStruct(val reflect.Value) *Size {
 }
 
 func (s *Size) writeResult(val reflect.Value, i int) {
-	fmt.Println(s.String())
 	inner := s.inner().sizeOf(val.Field(i))
 	s.result += inner.result
 	m := s.stats[val.Type().Name()].(map[string]interface{})

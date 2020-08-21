@@ -87,30 +87,54 @@ func BenchmarkLargeSlice(t *testing.B) {
 	}
 }
 
-func ding(t *testing.TB) {
+var nestedObjectString = "{\n    \"Abstract\": {\n        \"flatter\": {\n            \"Flat\": {\n                \"channel\": 8,\n                \"contacts\": 8,\n                \"inner\": {\n                    \"Inner\": {\n                        \"dinner\": 0\n                    }\n                },\n                \"name\": 40,\n                \"tags\": 24\n            }\n        }\n    }\n}"
 
-}
+var simpleString = `{
+    "Flat": {
+        "channel": 8,
+        "contacts": 8,
+        "inner": {
+            "Inner": {
+                "dinner": 0
+            }
+        },
+        "name": 0,
+        "tags": 72
+    }
+}`
+
 func TestInterfaceString(t *testing.T) {
-	//size := SizeOf(&Flat{ tags: []string{
-	//	"ding", "dong", "dyno",
-	//}})
-	//fmt.Println(ze.String())
-
-	size := SizeOf(
-		&SliceInterface{ things: make([]Abstract, 100)},
+	t.Run("simple string", func(t *testing.T) {
+		s := SizeOf(
+			&Flat{tags: []string{
+			"ding", "dong", "dyno",
+		}},
 		WithVerbose())
 
-	if size.String() != "{\n    \"SliceInterface\": {\n        \"things\": 1624\n    }\n}" {
-		t.Fatalf("wrong string result returned:\n%#v\n", size.String())
-	}
-	SizeOf(
-		&Abstract{flatter: &Flat{ name: "dingeling "}},
-		WithVerbose())
-	t.Error(SizeOf(&Flat{ contacts: map[string]Flat{
-		"lasse": Flat{
-			name: "jakobsen",
-		},
-	}, name: "dingeling "}).String())
+		if s.String() != simpleString {
+			t.Fatal(s.String())
+		}
+	})
+
+	t.Run("slice interface string", func(t *testing.T) {
+		size := SizeOf(
+			&SliceInterface{things: make([]Abstract, 100)},
+			WithVerbose())
+
+		if size.String() != "{\n    \"SliceInterface\": {\n        \"things\": 1624\n    }\n}" {
+			t.Fatalf("wrong string result returned:\n%#v\n", size.String())
+
+		}
+	})
+
+	t.Run("nested object string", func(t *testing.T) {
+		s := SizeOf(
+			&Abstract{flatter: &Flat{ name: "dingeling "}},
+			WithVerbose())
+		if s.String() != nestedObjectString {
+			t.Fatal(s.String())
+		}
+	})
 }
 
 func check(t *testing.T, a interface{}, b int64) {

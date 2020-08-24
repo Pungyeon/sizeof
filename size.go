@@ -8,16 +8,16 @@ import (
 )
 
 var (
-	_chan chan bool
-	Tab = "\t"
-	Bool *Size  = New(int64(unsafe.Sizeof(false)))
-	Int64 *Size = New(int64(unsafe.Sizeof(int64(0))))
-	Int32 *Size = New(int64(unsafe.Sizeof(int32(0))))
+	_chan  chan bool
+	Tab          = "\t"
+	Bool   *Size = New(int64(unsafe.Sizeof(false)))
+	Int64  *Size = New(int64(unsafe.Sizeof(int64(0))))
+	Int32  *Size = New(int64(unsafe.Sizeof(int32(0))))
 	Uint32 *Size = New(int64(unsafe.Sizeof(uint32(0))))
-	Int *Size = New(int64(unsafe.Sizeof(int(0))))
-	Chan *Size = New(int64(unsafe.Sizeof(_chan)))
-	Func *Size = New(int64(unsafe.Sizeof(func(){})))
-	Char = int64(unsafe.Sizeof('c'))
+	Int    *Size = New(int64(unsafe.Sizeof(int(0))))
+	Chan   *Size = New(int64(unsafe.Sizeof(_chan)))
+	Func   *Size = New(int64(unsafe.Sizeof(func() {})))
+	Char         = int64(unsafe.Sizeof('c'))
 )
 
 type Option func(*Size)
@@ -44,8 +44,8 @@ type Size struct {
 
 func New(size int64, opts ...Option) *Size {
 	s := &Size{
-		result: size,
-		stats: map[string]interface{}{},
+		result:     size,
+		stats:      map[string]interface{}{},
 		sliceLimit: 10_000,
 	}
 
@@ -55,7 +55,6 @@ func New(size int64, opts ...Option) *Size {
 
 	return s
 }
-
 
 func (s *Size) SizeOf(v interface{}) *Size {
 	return s.sizeOf(reflect.ValueOf(v))
@@ -75,9 +74,9 @@ func (s *Size) Result() int64 {
 
 func (s *Size) inner() *Size {
 	return &Size{
-		prefix: s.prefix+Tab,
-		stats: map[string]interface{}{},
-		verbose: s.verbose,
+		prefix:     s.prefix + Tab,
+		stats:      map[string]interface{}{},
+		verbose:    s.verbose,
 		sliceLimit: s.sliceLimit,
 	}
 }
@@ -141,11 +140,9 @@ func (s *Size) sizeOfMap(val reflect.Value) *Size {
 
 func (s *Size) sizeOfStruct(val reflect.Value) *Size {
 	s.stats[val.Type().Name()] = map[string]interface{}{}
-		s.result += int64(unsafe.Sizeof(val.Interface()))
+	s.result += int64(unsafe.Sizeof(val.Interface()))
 	for i := 0; i < val.NumField(); i++ {
-		if s.verbose {
-			s.writeResult(val, i)
-		}
+		s.writeResult(val, i)
 	}
 	return s
 }
@@ -153,11 +150,13 @@ func (s *Size) sizeOfStruct(val reflect.Value) *Size {
 func (s *Size) writeResult(val reflect.Value, i int) {
 	inner := s.inner().sizeOf(val.Field(i))
 	s.result += inner.result
-	m := s.stats[val.Type().Name()].(map[string]interface{})
-	if len(inner.stats) == 0 {
-		m[val.Type().Field(i).Name] = inner.result
-	} else {
-		m[val.Type().Field(i).Name] =  inner.stats
+	if s.verbose {
+		m := s.stats[val.Type().Name()].(map[string]interface{})
+		if len(inner.stats) == 0 {
+			m[val.Type().Field(i).Name] = inner.result
+		} else {
+			m[val.Type().Field(i).Name] = inner.stats
+		}
 	}
 }
 

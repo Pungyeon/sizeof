@@ -1,9 +1,7 @@
 package sizeof
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"reflect"
 	"testing"
 	"unsafe"
@@ -42,16 +40,11 @@ func TestSizeOf(t *testing.T) {
 	chanSize := int64(unsafe.Sizeof(c))
 	fullFlatSize := (interfaceSize*2) + mapSize + sliceSize + chanSize
 
-	check(t, char, int64(unsafe.Sizeof(char)))
-	check(t, str, int64(unsafe.Sizeof(char))*int64(len(str)))
-
-
-	b := &bytes.Buffer{}
-	func (w io.Writer) {
-		SizeOf(b)
-	}(b)
-
-	check(t, Flat{}, fullFlatSize)
+	t.Run("check primitives", func(t *testing.T) {
+		check(t, char, int64(unsafe.Sizeof(char)))
+		check(t, str, int64(unsafe.Sizeof(char))*int64(len(str)))
+		check(t, Flat{}, fullFlatSize)
+	})
 
 	t.Run("struct size", func(t *testing.T) {
 		fmt.Println("--------------------")
@@ -65,8 +58,8 @@ func TestSizeOf(t *testing.T) {
 			fullFlatSize+int64(unsafe.Sizeof('c')*23))
 	})
 
+	var flatter Flatter
 	t.Run("interface size", func(t *testing.T) {
-		var flatter Flatter
 		flatter = &Flat{
 			name: "dingeling",
 		}
@@ -139,8 +132,8 @@ func TestInterfaceString(t *testing.T) {
 
 func check(t *testing.T, a interface{}, b int64) {
 	size := SizeOf(a)
-	if size.result != b {
+	if size.Result() != b {
 		t.Fatalf("Not equal size (%s): %d != %d",
-			reflect.ValueOf(a).Kind(), size.result, b)
+			reflect.ValueOf(a).Kind(), size.Result(), b)
 	}
 }

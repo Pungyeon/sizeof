@@ -13,6 +13,7 @@ var (
 	Bool   *Size = New(int64(unsafe.Sizeof(false)))
 	Int64  *Size = New(int64(unsafe.Sizeof(int64(0))))
 	Int32  *Size = New(int64(unsafe.Sizeof(int32(0))))
+	Uint64 *Size = New(int64(unsafe.Sizeof(uint64(0))))
 	Uint32 *Size = New(int64(unsafe.Sizeof(uint32(0))))
 	Uint16 *Size = New(int64(unsafe.Sizeof(uint16(0))))
 	Uint8  *Size = New(int64(unsafe.Sizeof(uint8(0))))
@@ -104,6 +105,8 @@ func (s *Size) sizeOfObject(val reflect.Value) *Size {
 		return Int64
 	case reflect.Int32:
 		return Int32
+	case reflect.Uint64:
+		return Uint64
 	case reflect.Uint32:
 		return Uint32
 	case reflect.Uint16:
@@ -118,7 +121,7 @@ func (s *Size) sizeOfObject(val reflect.Value) *Size {
 		return New(Char * int64(val.Len()))
 	case reflect.Map:
 		return s.inner().sizeOfMap(val)
-	case reflect.Slice:
+	case reflect.Slice, reflect.Array:
 		return s.inner().sizeOfSlice(val)
 	case reflect.Chan:
 		return Chan

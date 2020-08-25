@@ -171,15 +171,18 @@ func (s *Size) writeResult(val reflect.Value, i int) {
 
 func (s *Size) sizeOfSlice(val reflect.Value) *Size {
 	s.result += int64(unsafe.Sizeof([]int{}))
-	for i := 0; i < s.getLenWithLimit(val); i++ {
-		s.result += s.inner().sizeOf(val.Index(i)).result
+	var result int64
+	limit, multiplier := s.getLenWithLimit(val)
+	for i := 0; i < limit; i++ {
+		result += s.inner().sizeOf(val.Index(i)).result
 	}
+	s.result += result*multiplier
 	return s
 }
 
-func (s *Size) getLenWithLimit(val reflect.Value) int {
+func (s *Size) getLenWithLimit(val reflect.Value) (int, int64) {
 	if val.Len() > s.sliceLimit && s.sliceLimit != 0 {
-		return s.sliceLimit
+		return s.sliceLimit, int64(val.Len() / s.sliceLimit)
 	}
-	return val.Len()
+	return val.Len(), 1
 }

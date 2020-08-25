@@ -74,7 +74,7 @@ func BenchmarkLargeSlice(t *testing.B) {
 	t.ResetTimer()
 	for i := 0; i < t.N; i++ {
 		size := SizeOf(&SliceInterface{ things: slice})
-		if size.Result() > 16000000 {
+		if size.Result() != 16000040 {
 			t.Fatal(size.Result())
 		}
 	}
